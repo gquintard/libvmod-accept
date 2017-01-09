@@ -10,28 +10,28 @@ import accept;
 DESCRIPTION
 ===========
 
-Accept Varnish vmod demonstrating how to write an out-of-tree Varnish vmod.
+accept allows you to sanitize the Accept* headers (mainly Accept,
+Accept-Charset and Accept-Encoding) by specify one fallback string, and then
+adding valid values::
 
-Implements the traditional Hello World as a vmod.
+        new rule = accept.rule("text/plain");
+        rule.add("text/html");
+        rule.add("application/json");
+
+You can then use the ``rule`` object to filter the headers. The following line
+will set the accept header to "text/html" or "application/json" if any of them
+is found in the original header, and will set it to "text/plain" if neither is
+found::
+
+        set req.http.Accept = rule.filter(req.http.Accept);
+
+accept will ignore any parameter found and will just return the first choice
+found. More info here: https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html
 
 FUNCTIONS
 =========
 
-hello
------
-
-Prototype
-        ::
-
-                hello(STRING S)
-Return value
-	STRING
-Description
-	Returns "Hello, " prepended to S
-Accept
-        ::
-
-                set resp.http.hello = accept.hello("World");
+The full API is listed in src/vmod_str.vcc.
 
 INSTALLATION
 ============
@@ -89,9 +89,16 @@ In your VCL you could then use this vmod along the following lines::
 
         import accept;
 
-        sub vcl_deliver {
-                # This sets resp.http.hello to "Hello, World"
-                set resp.http.hello = accept.hello("World");
+        sub vcl_init {
+                new rule = accept.rule("en");
+                rule.add("en");
+                rule.add("de");
+        }
+
+        sub vcl_recv {
+                # filter the Accept-Language header, returning "en" or "de" if
+                # found in the header, and "en" otherwise.
+                set req.http.Accept-Language = rule.filter(req.http.Accept-Language);
         }
 
 COMMON PROBLEMS
