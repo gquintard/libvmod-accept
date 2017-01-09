@@ -1,16 +1,16 @@
 ============
-vmod-example
+vmod-accept
 ============
 
 SYNOPSIS
 ========
 
-import example;
+import accept;
 
 DESCRIPTION
 ===========
 
-Example Varnish vmod demonstrating how to write an out-of-tree Varnish vmod.
+Accept Varnish vmod demonstrating how to write an out-of-tree Varnish vmod.
 
 Implements the traditional Hello World as a vmod.
 
@@ -28,10 +28,10 @@ Return value
 	STRING
 Description
 	Returns "Hello, " prepended to S
-Example
+Accept
         ::
 
-                set resp.http.hello = example.hello("World");
+                set resp.http.hello = accept.hello("World");
 
 INSTALLATION
 ============
@@ -87,11 +87,11 @@ USAGE
 
 In your VCL you could then use this vmod along the following lines::
 
-        import example;
+        import accept;
 
         sub vcl_deliver {
                 # This sets resp.http.hello to "Hello, World"
-                set resp.http.hello = example.hello("World");
+                set resp.http.hello = accept.hello("World");
         }
 
 COMMON PROBLEMS

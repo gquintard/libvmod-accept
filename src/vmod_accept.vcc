@@ -1,0 +1,28 @@
+#
+# Copyright YOU (c) 1900.
+#
+# (vmodtool requires this format.)
+#
+
+$Module accept 3 Accept VMOD
+
+DESCRIPTION
+===========
+
+This is the embedded documentation for the accept VMOD. It should
+mention what the vmod is intended to do.
+
+It can span multiple lines and is written in RST format.
+You can even have links and lists in here:
+
+* https://github.com/varnish/libvmod-accept/
+* https://www.varnish-cache.org/
+
+The init-function declared next does not have documentation.
+
+$Object rule(STRING)
+
+$Method VOID .add(STRING)
+
+$Method STRING .filter(STRING)
+

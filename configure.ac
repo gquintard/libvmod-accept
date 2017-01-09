@@ -1,9 +1,9 @@
 AC_PREREQ([2.68])
-AC_INIT([libvmod-example], [0.1], [], [vmod-example])
+AC_INIT([libvmod-accept], [0.1], [], [vmod-accept])
 AC_COPYRIGHT([Copyright (c) 2011-2016 Varnish Software AS])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([build-aux])
-AC_CONFIG_SRCDIR(src/vmod_example.vcc)
+AC_CONFIG_SRCDIR(src/vmod_accept.vcc)
 AC_CONFIG_HEADER([config.h])
 
 AM_INIT_AUTOMAKE([1.12 -Wall -Werror foreign parallel-tests])
@@ -29,7 +29,7 @@ AC_ARG_WITH([rst2man],
 m4_ifndef([VARNISH_PREREQ], AC_MSG_ERROR([Need varnish.m4 -- see README.rst]))
 
 VARNISH_PREREQ([5.0], [5.1])
-VARNISH_VMODS([example])
+VARNISH_VMODS([accept])
 
 VMOD_TESTS="$(cd $srcdir/src && echo tests/*.vtc)"
 AC_SUBST(VMOD_TESTS)

@@ -1,36 +1,63 @@
-varnishtest "Test example vmod"
+varnishtest "Test accept vmod"
 
 server s1 {
        rxreq
        txresp
+       expect req.http.tst == "foo"
+
+       rxreq
+       txresp
+       expect req.http.tst == "bar"
+
+       rxreq
+       txresp
+       expect req.http.tst == "baz"
+
+       rxreq
+       txresp
+       expect req.http.tst == "bar"
+
+       rxreq
+       txresp
+       expect req.http.tst == "bar"
+
+       rxreq
+       txresp
+       expect req.http.tst == "bar"
+
 } -start
 
 varnish v1 -vcl+backend {
-	import std;
-	import ${vmod_example};
+	import ${vmod_accept};
 
 	sub vcl_init {
-		std.log(example.info());
+		new rule = accept.rule("foo");
+		rule.add("bar");
+		rule.add("baz");
 	}
 
-	sub vcl_deliver {
-		set resp.http.hello = example.hello("World");
-		set resp.http.info = example.info();
+	sub vcl_recv {
+		set req.http.tst = rule.filter(req.http.tst);
+		return (pass);
 	}
-} -start
-
-logexpect l1 -v v1 -g raw -d 1 {
-	expect 0 0    CLI     {^Rd vcl.load}
-	expect 0 =    VCL_Log {^vmod_example loaded at }
 } -start
 
 client c1 {
-	txreq -url "/"
+	txreq -hdr "tst: foo"
 	rxresp
-	expect resp.http.hello == "Hello, World"
-	expect resp.http.info  ~  "^vmod_example warmed at "
-}
 
-client c1 -run
+	txreq -hdr "tst: bar"
+	rxresp
 
-logexpect l1 -wait
+	txreq -hdr "tst: baz"
+	rxresp
+
+	txreq -hdr "tst: qux;q=1  level=15,bar;baz"
+	rxresp
+
+	txreq -hdr "tst: baza; baz    ,  bar, baz"
+	rxresp
+
+	txreq -hdr "tst: this. is; a-tricky/one , but,   bar  , is)what$we want"
+	rxresp
+} -run
