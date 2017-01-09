@@ -1,5 +1,7 @@
 #
-# Copyright YOU (c) 1900.
+# Copyright (c) 2016 Guillaume Quintard
+# 
+# Author: Guillaume Quintard <guillaume.quintard@gmail.com>
 #
 # (vmodtool requires this format.)
 #
@@ -9,20 +11,21 @@ $Module accept 3 Accept VMOD
 DESCRIPTION
 ===========
 
-This is the embedded documentation for the accept VMOD. It should
-mention what the vmod is intended to do.
+vmod_accept aims at ease Accept headers sanitization.
 
-It can span multiple lines and is written in RST format.
-You can even have links and lists in here:
+API
+===
 
-* https://github.com/varnish/libvmod-accept/
-* https://www.varnish-cache.org/
+$Object rule(STRING string)
 
-The init-function declared next does not have documentation.
+Create a rule object, setting the fallback string.
 
-$Object rule(STRING)
+$Method VOID .add(STRING string)
 
-$Method VOID .add(STRING)
+Add ``string`` to the list of valid choices.
 
-$Method STRING .filter(STRING)
+$Method STRING .filter(STRING string)
 
+Parse string and try to find a valid choice. The first one found is returned
+(they are tested in the same order they were added), otherwise, the fallback
+string is returned.
