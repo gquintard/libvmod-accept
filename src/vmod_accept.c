@@ -2,6 +2,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
+#include <errno.h>
 
 /* need vcl.h before vrt.h for vmod_evet_f typedef */
 #include "vcl.h"
@@ -66,7 +68,7 @@ vmod_rule__fini(struct vmod_accept_rule **rulep)
 }
 
 static struct vmod_accept_token *
-find_token(struct vmod_accept_rule *r, VCL_STRING s, ssize_t l, VRT_CTX)
+match_token(struct vmod_accept_rule *r, VCL_STRING s, ssize_t l)
 {
 	struct vmod_accept_token *t;
 	int match;
@@ -99,7 +101,7 @@ vmod_rule_add(VRT_CTX, struct vmod_accept_rule *r, VCL_STRING s)
 
 	AZ(pthread_rwlock_wrlock(&r->mtx));
 
-	t = find_token(r, s, -1, ctx);
+	t = match_token(r, s, -1);
 
 	if (t == NULL) {
 		ALLOC_OBJ(t, TOKEN_MAGIC);
@@ -111,53 +113,139 @@ vmod_rule_add(VRT_CTX, struct vmod_accept_rule *r, VCL_STRING s)
 	AZ(pthread_rwlock_unlock(&r->mtx));
 }
 
+#define SKIPSPACE(p) while (*p && isspace(*p)) {p++;}
+
+/* 0 all good, got a token
+ * 1 reached the end of string
+ * 2 got a comma
+ * 3 got a semi-colon
+ * 4 got an equal sign */
 static unsigned
-valid_char(char c) {
-	if (		(c >= '0' && c <= '9') ||
-			(c >= 'A' && c <= 'Z') ||
-			(c >= 'a' && c <= 'z') ||
-			 c == '-' ||
-			 c == '/')
+next_token(VCL_STRING s, const char **b, const char **e) {
+	AN(s);
+	while (*s && isspace(*s))
+		s++;
+	*b = s;
+	*e = s + 1;
+
+	switch (*s) {
+		case '\0': return (1);
+		case ',' : return (2);
+		case ';' : return (3);
+		case '=' : return (4);
+	}
+
+	while (*s != '\0' && *s != ',' && *s != ';' && *s != '=' &&
+			!isspace(*s))
+		s++;
+	*e = s;
+	return (0);
+}
+
+/* 0 all good, got a token
+ * 1 reached the end of string
+ * 2 parsing error */
+unsigned
+parse_accept(VCL_STRING s, const char **endptr, const char **b, const char **e,
+		double *q) {
+	const char *tb;
+	char *tep;
+	unsigned r, expectq = 1;
+	*q = 1;
+
+	r = next_token(s, b, e);
+	if (r >= 2)
+		return (2);
+	if (r == 1) {
+		*endptr = NULL;
 		return (1);
-	else
-		return (0);
+	}
+	s = *e;
+	while (1) {
+#define EXPECT_OR_RETURN(n)				\
+		do {					\
+			r = next_token(s, &tb, endptr);	\
+			s = *endptr;			\
+			if (r != n)			\
+				return (2);		\
+			AN(s);				\
+		} while (0)
+
+		/* comma and '\0' end the block cleanly, otherwise, we want a
+		 * semi-colon */
+		r = next_token(s, &tb, endptr);
+		s = *endptr;
+		if (r == 1 || r == 2)
+			return (0);
+		if (r != 3)
+			return (2);
+		AN(s);
+
+		/* expect a string, if it's not 'q', unset expectq */
+		EXPECT_OR_RETURN(0);
+		if (*endptr - tb != 1 || *tb != 'q')
+			expectq = 0;
+
+		/* expect an equal sign */
+		EXPECT_OR_RETURN(4);
+
+		/* expect a string */
+		EXPECT_OR_RETURN(0);
+#undef EXPECT_OR_RETURN
+
+		if (expectq) {
+			s = tb;
+			/* testing that string starts with 0 or 1 avoid checking
+			 * for NAN and INF */
+			if ((*s != '0' && *s != '1') ||
+					*(s+1) == 'x' ||
+					*(s+1) == 'X')
+				return (2);
+			errno = 0;
+			*q = strtod(s, &tep);
+			if (errno || *q < 0 || *q > 1)
+				return (2);
+			s = tep;
+			AN(s);
+		}
+		expectq = 0;
+	}
+
+	AN(0);
 }
 
 VCL_STRING
-vmod_rule_filter(VRT_CTX, struct vmod_accept_rule *r, VCL_STRING s)
+vmod_rule_filter(VRT_CTX, struct vmod_accept_rule *rule, VCL_STRING s)
 {
-	const char *normalized = NULL, *b, *e = s;
-	struct vmod_accept_token *t;
+	const char *normalized = NULL, *b, *e = s, *endptr;
+	struct vmod_accept_token *t, *bt = NULL;
+	double q, bq = 0;
+	unsigned r;
 
-	CHECK_OBJ_NOTNULL(r, RULE_MAGIC);
+	CHECK_OBJ_NOTNULL(rule, RULE_MAGIC);
 	CHECK_OBJ_NOTNULL(ctx, VRT_CTX_MAGIC);
 
-	AZ(pthread_rwlock_rdlock(&r->mtx));
+	AZ(pthread_rwlock_rdlock(&rule->mtx));
 
-	while (s) {
-		b = e;
-		while (*b != '\0' && !valid_char(*b))
-			b++;
-		if (*b == '\0')
-			break;
-		e = b + 1;
-		while (valid_char(*e))
-			e++;
+	while (s && (r = parse_accept(s, &endptr, &b, &e, &q)) == 0) {
+		AN(endptr);
+		s = endptr;
+		t = match_token(rule, b, e - b);
+		if (!t)
+			continue;
 
-		t = find_token(r, b, e - b, ctx);
-		if (t != NULL) {
-			normalized = WS_Copy(ctx->ws, t->string, -1);
-			break;
+		if (q > bq) {
+			bt = t;
+			bq = q;
 		}
-
-		while (*e != '\0' && *e != ',')
-			e++;
 	}
 
-	if (normalized == NULL)
-		normalized = WS_Copy(ctx->ws, r->fallback, -1);
+	if (r == 2 || bt == NULL)
+		normalized = WS_Copy(ctx->ws, rule->fallback, -1);
+	else
+		normalized = WS_Copy(ctx->ws, bt->string, -1);
 
-	AZ(pthread_rwlock_unlock(&r->mtx));
+	AZ(pthread_rwlock_unlock(&rule->mtx));
 
 	return (normalized);
 }
