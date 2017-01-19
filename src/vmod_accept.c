@@ -57,8 +57,11 @@ vmod_rule__fini(struct vmod_accept_rule **rulep)
 	struct vmod_accept_rule *r = *rulep;
 	struct vmod_accept_token *t, *token2;
 
-	VTAILQ_FOREACH_SAFE(t, &r->tokens, list, token2)
+	VTAILQ_FOREACH_SAFE(t, &r->tokens, list, token2) {
+		VTAILQ_REMOVE(&r->tokens, t, list);
 		free(t->string);
+		FREE_OBJ(t);
+	}
 
 	AZ(pthread_rwlock_destroy(&r->mtx));
 	free(r->fallback);
