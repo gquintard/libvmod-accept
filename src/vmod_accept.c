@@ -165,10 +165,10 @@ next_token(const char **b, const char **e)
 	*e = s + 1;
 
 	switch (*s) {
-		case '\0': return (TOK_EOS);
-		case ',' : return (TOK_COMMA);
-		case ';' : return (TOK_SEMI);
-		case '=' : return (TOK_EQ);
+		case '\0': *e = s; return (TOK_EOS);
+		case ',' :	   return (TOK_COMMA);
+		case ';' :	   return (TOK_SEMI);
+		case '=' :	   return (TOK_EQ);
 	}
 
 	while (*s != '\0' && *s != ',' && *s != ';' && *s != '=' &&
