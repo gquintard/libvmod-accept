@@ -28,6 +28,13 @@ found::
 accept will ignore any parameter found and will just return the first choice
 found. More info here: https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html
 
+If the idea of this vmod rings a bell, it's probably because it started as a
+replacement for @cosimo's `varnish-accept-language VCL module
+<https://github.com/cosimo/varnish-accept-language`_, before the author noticed
+`his new version<https://github.com/cosimo/libvmod-i18n>`_. However, vmod-accept
+tries to be more generic, and should be usable with all accept headers and not
+just the accept-language ones.
+
 FUNCTIONS
 =========
 
