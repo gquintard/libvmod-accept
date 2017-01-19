@@ -113,137 +113,145 @@ vmod_rule_add(VRT_CTX, struct vmod_accept_rule *r, VCL_STRING s)
 	AZ(pthread_rwlock_unlock(&r->mtx));
 }
 
-#define SKIPSPACE(p) while (*p && isspace(*p)) {p++;}
+enum tok_code {
+	TOK_STR,
+	TOK_EOS,
+	TOK_ERR,
+	TOK_COMMA,
+	TOK_SEMI,
+	TOK_EQ
+};
 
-/* 0 all good, got a token
- * 1 reached the end of string
- * 2 got a comma
- * 3 got a semi-colon
- * 4 got an equal sign */
-static unsigned
-next_token(VCL_STRING s, const char **b, const char **e) {
-	AN(s);
+static enum tok_code
+next_token(const char **b, const char **e) {
+	const char *s;
+
+	AN(b);
+	AN(*b);
+	AN(e);
+
+	s = *b;
 	while (*s && isspace(*s))
 		s++;
 	*b = s;
 	*e = s + 1;
 
 	switch (*s) {
-		case '\0': return (1);
-		case ',' : return (2);
-		case ';' : return (3);
-		case '=' : return (4);
+		case '\0': return (TOK_EOS);
+		case ',' : return (TOK_COMMA);
+		case ';' : return (TOK_SEMI);
+		case '=' : return (TOK_EQ);
 	}
 
 	while (*s != '\0' && *s != ',' && *s != ';' && *s != '=' &&
 			!isspace(*s))
 		s++;
 	*e = s;
-	return (0);
+	return (TOK_STR);
 }
+
+#define NEXT()					\
+	do {					\
+		AN(*nxtok);			\
+		start = *nxtok;			\
+		tc = next_token(&start, nxtok);	\
+	}while (0)
+#define EXPECT(n)	if (tc != n) {return (2);}
 
 /* 0 all good, got a token
  * 1 reached the end of string
  * 2 parsing error */
 unsigned
-parse_accept(VCL_STRING s, const char **endptr, const char **b, const char **e,
-		double *q) {
-	const char *tb;
-	char *tep;
-	unsigned r, expectq = 1;
+parse_accept(const char **b, const char **e, const char **nxtok, double *q) {
+	const char *start = *b;
+	unsigned expectq = 1;
+	enum tok_code tc;
+	char *eod;
+
+	AN(b);
+	AN(*b);
+	AN(e);
+	AN(nxtok);
+	AN(q);
+
+	/* grab the next token, if not EOS, must be a string */
+	tc = next_token(b, e);
+	if (tc == TOK_EOS)
+		return (1);
+	EXPECT(TOK_STR);
+	*nxtok = *e;
 	*q = 1;
 
-	r = next_token(s, b, e);
-	if (r >= 2)
-		return (2);
-	if (r == 1) {
-		*endptr = NULL;
-		return (1);
-	}
-	s = *e;
+	/* look for parameters */
 	while (1) {
-#define EXPECT_OR_RETURN(n)				\
-		do {					\
-			r = next_token(s, &tb, endptr);	\
-			s = *endptr;			\
-			if (r != n)			\
-				return (2);		\
-			AN(s);				\
-		} while (0)
-
 		/* comma and '\0' end the block cleanly, otherwise, we want a
 		 * semi-colon */
-		r = next_token(s, &tb, endptr);
-		s = *endptr;
-		if (r == 1 || r == 2)
+		NEXT();
+		if (tc == TOK_EOS || tc == TOK_COMMA)
 			return (0);
-		if (r != 3)
-			return (2);
-		AN(s);
+		EXPECT(TOK_SEMI);
 
-		/* expect a string, if it's not 'q', unset expectq */
-		EXPECT_OR_RETURN(0);
-		if (*endptr - tb != 1 || *tb != 'q')
+		NEXT();
+		EXPECT(TOK_STR);
+		if (*nxtok - start != 1 || *start != 'q')
 			expectq = 0;
 
-		/* expect an equal sign */
-		EXPECT_OR_RETURN(4);
+		NEXT();
+		EXPECT(TOK_EQ);
 
-		/* expect a string */
-		EXPECT_OR_RETURN(0);
-#undef EXPECT_OR_RETURN
-
+		NEXT();
+		EXPECT(TOK_STR);
 		if (expectq) {
-			s = tb;
-			/* testing that string starts with 0 or 1 avoid checking
-			 * for NAN and INF */
-			if ((*s != '0' && *s != '1') ||
-					*(s+1) == 'x' ||
-					*(s+1) == 'X')
+			/* testing that string starts with 0 or 1 avoids
+			 * checking for NAN and INF */
+			if ((*start != '0' && *start != '1') ||
+					*(start+1) == 'x' ||
+					*(start+1) == 'X')
 				return (2);
 			errno = 0;
-			*q = strtod(s, &tep);
+			*q = strtod(start, &eod);
 			if (errno || *q < 0 || *q > 1)
 				return (2);
-			s = tep;
-			AN(s);
+			*nxtok = eod;
 		}
 		expectq = 0;
 	}
-
-	AN(0);
 }
+#undef NEXT
+#undef EXPECT
 
 VCL_STRING
 vmod_rule_filter(VRT_CTX, struct vmod_accept_rule *rule, VCL_STRING s)
 {
-	const char *normalized = NULL, *b, *e = s, *endptr;
-	struct vmod_accept_token *t, *bt = NULL;
-	double q, bq = 0;
+	const char *candidate, *normalized, *b, *e, *nxtok = s;
+	struct vmod_accept_token *t;
+	double q, maxq = 0;
 	unsigned r;
 
 	CHECK_OBJ_NOTNULL(rule, RULE_MAGIC);
 	CHECK_OBJ_NOTNULL(ctx, VRT_CTX_MAGIC);
 
+	candidate = rule->fallback;
+
 	AZ(pthread_rwlock_rdlock(&rule->mtx));
 
-	while (s && (r = parse_accept(s, &endptr, &b, &e, &q)) == 0) {
-		AN(endptr);
-		s = endptr;
-		t = match_token(rule, b, e - b);
-		if (!t)
-			continue;
+	while (s) {
+		b = nxtok;
+		r = parse_accept(&b, &e, &nxtok, &q);
+		if (r == 2)
+			candidate = rule->fallback;
+		if (r != 0)
+			break;
 
-		if (q > bq) {
-			bt = t;
-			bq = q;
+		t = match_token(rule, b, e - b);
+		if (t && q > maxq) {
+			maxq = q;
+			candidate = t->string;
 		}
 	}
 
-	if (r == 2 || bt == NULL)
-		normalized = WS_Copy(ctx->ws, rule->fallback, -1);
-	else
-		normalized = WS_Copy(ctx->ws, bt->string, -1);
+	normalized = WS_Copy(ctx->ws, candidate, -1);
+	AN(normalized);
 
 	AZ(pthread_rwlock_unlock(&rule->mtx));
 
