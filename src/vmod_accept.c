@@ -18,6 +18,7 @@ struct vmod_accept_token {
 	unsigned			magic;
 #define TOKEN_MAGIC			0x1ba7712d
 	char				*string;
+	size_t				length;
 	VTAILQ_ENTRY(vmod_accept_token)	list;
 };
 
@@ -71,22 +72,19 @@ vmod_rule__fini(struct vmod_accept_rule **rulep)
 }
 
 static struct vmod_accept_token *
-match_token(struct vmod_accept_rule *r, VCL_STRING s, ssize_t l)
+match_token(struct vmod_accept_rule *r, VCL_STRING s, size_t l)
 {
 	struct vmod_accept_token *t;
-	int match;
 
 	CHECK_OBJ_NOTNULL(r, RULE_MAGIC);
 	AN(s);
+	AN(l);
 
 	VTAILQ_FOREACH(t, &r->tokens, list) {
 		AN(t->string);
-		if (l == -1)
-			match = strcmp(t->string, s) ? 0 : 1;
-		else
-			match = strncmp(t->string, s, l) ? 0 : 1;
-
-		if (match)
+		if (l != t->length)
+			continue;
+		if (!strncmp(t->string, s, l))
 			break;
 	}
 	return (t);
