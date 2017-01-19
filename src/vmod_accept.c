@@ -104,13 +104,37 @@ vmod_rule_add(VRT_CTX, struct vmod_accept_rule *r, VCL_STRING s)
 
 	AZ(pthread_rwlock_wrlock(&r->mtx));
 
-	t = match_token(r, s, -1);
+	t = match_token(r, s, strlen(s));
 
 	if (t == NULL) {
 		ALLOC_OBJ(t, TOKEN_MAGIC);
 		AN(t);
 		REPLACE(t->string, s);
+		t->length = strlen(s);
 		VTAILQ_INSERT_HEAD(&r->tokens, t, list);
+	}
+
+	AZ(pthread_rwlock_unlock(&r->mtx));
+}
+
+VCL_VOID
+vmod_rule_remove(VRT_CTX, struct vmod_accept_rule *r, VCL_STRING s)
+{
+	struct vmod_accept_token *t;
+
+	CHECK_OBJ_NOTNULL(r, RULE_MAGIC);
+
+	if (s == NULL)
+		return;
+
+	AZ(pthread_rwlock_wrlock(&r->mtx));
+
+	t = match_token(r, s, strlen(s));
+
+	if (t != NULL) {
+		VTAILQ_REMOVE(&r->tokens, t, list);
+		free(t->string);
+		FREE_OBJ(t);
 	}
 
 	AZ(pthread_rwlock_unlock(&r->mtx));
