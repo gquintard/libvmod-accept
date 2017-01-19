@@ -123,7 +123,8 @@ enum tok_code {
 };
 
 static enum tok_code
-next_token(const char **b, const char **e) {
+next_token(const char **b, const char **e)
+{
 	const char *s;
 
 	AN(b);
@@ -162,7 +163,8 @@ next_token(const char **b, const char **e) {
  * 1 reached the end of string
  * 2 parsing error */
 unsigned
-parse_accept(const char **b, const char **e, const char **nxtok, double *q) {
+parse_accept(const char **b, const char **e, const char **nxtok, double *q)
+{
 	const char *start = *b;
 	unsigned expectq = 1;
 	enum tok_code tc;
