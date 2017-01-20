@@ -31,8 +31,7 @@ struct vmod_accept_rule {
 };
 
 VCL_VOID __match_proto__()
-vmod_rule__init(VRT_CTX,
-		struct vmod_accept_rule **rulep, const char *vcl_name,
+vmod_rule__init(VRT_CTX, struct vmod_accept_rule **rulep, const char *vcl_name,
 		VCL_STRING fallback)
 {
 	struct vmod_accept_rule *r;
