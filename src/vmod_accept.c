@@ -89,8 +89,10 @@ match_token(struct vmod_accept_rule *rule, VCL_STRING s, size_t l)
 	return (t);
 }
 
+#define ADD	1
+#define REMOVE	0
 static void
-add_remove(struct vmod_accept_rule *rule, VCL_STRING s, unsigned add)
+add_or_remove(struct vmod_accept_rule *rule, VCL_STRING s, unsigned action)
 {
 	struct vmod_accept_token *t;
 
@@ -103,13 +105,13 @@ add_remove(struct vmod_accept_rule *rule, VCL_STRING s, unsigned add)
 
 	t = match_token(rule, s, strlen(s));
 
-	if (add == 1 && t == NULL) {
+	if (action == ADD && t == NULL) {
 		ALLOC_OBJ(t, TOKEN_MAGIC);
 		AN(t);
 		REPLACE(t->string, s);
 		t->length = strlen(s);
 		VTAILQ_INSERT_HEAD(&rule->tokens, t, list);
-	} else if (add == 0 && t != NULL) {
+	} else if (action == REMOVE && t != NULL) {
 		VTAILQ_REMOVE(&rule->tokens, t, list);
 		free(t->string);
 		FREE_OBJ(t);
@@ -122,13 +124,13 @@ add_remove(struct vmod_accept_rule *rule, VCL_STRING s, unsigned add)
 VCL_VOID
 vmod_rule_add(VRT_CTX, struct vmod_accept_rule *rule, VCL_STRING s)
 {
-	add_remove(rule, s, 1);
+	add_or_remove(rule, s, ADD);
 }
 
 VCL_VOID
 vmod_rule_remove(VRT_CTX, struct vmod_accept_rule *rule, VCL_STRING s)
 {
-	add_remove(rule, s, 0);
+	add_or_remove(rule, s, REMOVE);
 }
 
 enum tok_code {
