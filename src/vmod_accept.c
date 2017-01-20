@@ -34,52 +34,52 @@ VCL_VOID __match_proto__()
 vmod_rule__init(VRT_CTX, struct vmod_accept_rule **rulep, const char *vcl_name,
 		VCL_STRING fallback)
 {
-	struct vmod_accept_rule *r;
+	struct vmod_accept_rule *rule;
 
-	ALLOC_OBJ(r, RULE_MAGIC);
-	AN(r);
+	ALLOC_OBJ(rule, RULE_MAGIC);
+	AN(rule);
 
-	VTAILQ_INIT(&r->tokens);
-	AZ(pthread_rwlock_init(&r->mtx, NULL));
+	VTAILQ_INIT(&rule->tokens);
+	AZ(pthread_rwlock_init(&rule->mtx, NULL));
 	if (fallback == NULL)
-		r->fallback = strdup("");
+		rule->fallback = strdup("");
 	else
-		r->fallback = strdup(fallback);
-	AN(r->fallback);
+		rule->fallback = strdup(fallback);
+	AN(rule->fallback);
 
-	*rulep = r;
+	*rulep = rule;
 }
 
 
 VCL_VOID
 vmod_rule__fini(struct vmod_accept_rule **rulep)
 {
-	struct vmod_accept_rule *r = *rulep;
+	struct vmod_accept_rule *rule = *rulep;
 	struct vmod_accept_token *t, *token2;
 
-	VTAILQ_FOREACH_SAFE(t, &r->tokens, list, token2) {
-		VTAILQ_REMOVE(&r->tokens, t, list);
+	VTAILQ_FOREACH_SAFE(t, &rule->tokens, list, token2) {
+		VTAILQ_REMOVE(&rule->tokens, t, list);
 		free(t->string);
 		FREE_OBJ(t);
 	}
 
-	AZ(pthread_rwlock_destroy(&r->mtx));
-	free(r->fallback);
-	free(r);
+	AZ(pthread_rwlock_destroy(&rule->mtx));
+	free(rule->fallback);
+	free(rule);
 
 	*rulep = NULL;
 }
 
 static struct vmod_accept_token *
-match_token(struct vmod_accept_rule *r, VCL_STRING s, size_t l)
+match_token(struct vmod_accept_rule *rule, VCL_STRING s, size_t l)
 {
 	struct vmod_accept_token *t;
 
-	CHECK_OBJ_NOTNULL(r, RULE_MAGIC);
+	CHECK_OBJ_NOTNULL(rule, RULE_MAGIC);
 	AN(s);
 	AN(l);
 
-	VTAILQ_FOREACH(t, &r->tokens, list) {
+	VTAILQ_FOREACH(t, &rule->tokens, list) {
 		AN(t->string);
 		if (l != t->length)
 			continue;
@@ -89,52 +89,46 @@ match_token(struct vmod_accept_rule *r, VCL_STRING s, size_t l)
 	return (t);
 }
 
-VCL_VOID
-vmod_rule_add(VRT_CTX, struct vmod_accept_rule *r, VCL_STRING s)
+static void
+add_remove(struct vmod_accept_rule *rule, VCL_STRING s, unsigned add)
 {
 	struct vmod_accept_token *t;
 
-	CHECK_OBJ_NOTNULL(r, RULE_MAGIC);
+	CHECK_OBJ_NOTNULL(rule, RULE_MAGIC);
 
 	if (s == NULL)
 		return;
 
-	AZ(pthread_rwlock_wrlock(&r->mtx));
+	AZ(pthread_rwlock_wrlock(&rule->mtx));
 
-	t = match_token(r, s, strlen(s));
+	t = match_token(rule, s, strlen(s));
 
-	if (t == NULL) {
+	if (add == 1 && t == NULL) {
 		ALLOC_OBJ(t, TOKEN_MAGIC);
 		AN(t);
 		REPLACE(t->string, s);
 		t->length = strlen(s);
-		VTAILQ_INSERT_HEAD(&r->tokens, t, list);
-	}
-
-	AZ(pthread_rwlock_unlock(&r->mtx));
-}
-
-VCL_VOID
-vmod_rule_remove(VRT_CTX, struct vmod_accept_rule *r, VCL_STRING s)
-{
-	struct vmod_accept_token *t;
-
-	CHECK_OBJ_NOTNULL(r, RULE_MAGIC);
-
-	if (s == NULL)
-		return;
-
-	AZ(pthread_rwlock_wrlock(&r->mtx));
-
-	t = match_token(r, s, strlen(s));
-
-	if (t != NULL) {
-		VTAILQ_REMOVE(&r->tokens, t, list);
+		VTAILQ_INSERT_HEAD(&rule->tokens, t, list);
+	} else if (add == 0 && t != NULL) {
+		VTAILQ_REMOVE(&rule->tokens, t, list);
 		free(t->string);
 		FREE_OBJ(t);
 	}
 
-	AZ(pthread_rwlock_unlock(&r->mtx));
+	AZ(pthread_rwlock_unlock(&rule->mtx));
+}
+
+
+VCL_VOID
+vmod_rule_add(VRT_CTX, struct vmod_accept_rule *rule, VCL_STRING s)
+{
+	add_remove(rule, s, 1);
+}
+
+VCL_VOID
+vmod_rule_remove(VRT_CTX, struct vmod_accept_rule *rule, VCL_STRING s)
+{
+	add_remove(rule, s, 0);
 }
 
 enum tok_code {
