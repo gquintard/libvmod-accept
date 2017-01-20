@@ -1,4 +1,26 @@
-AM_CFLAGS = $(VARNISHAPI_CFLAGS) -Wall -Werror
+AM_CFLAGS = $(VARNISHAPI_CFLAGS)
+	-Wall \
+	-Werror \
+	-Werror \
+	-Wall \
+	-Wno-format-y2k \
+	-W \
+	-Wstrict-prototypes \
+	-Wmissing-prototypes \
+	-Werror=missing-field-initializers \
+	-Wpointer-arith \
+	-Wreturn-type \
+	-Wwrite-strings \
+	-Wcast-qual \
+	-Wswitch \
+	-Wshadow \
+	-Wunused-parameter \
+	-Wcast-align \
+	-Wchar-subscripts \
+	-Wnested-externs \
+	-Wextra \
+	-Wno-sign-compare
+
 AM_LDFLAGS = $(VARNISHAPI_LIBS) $(VMOD_LDFLAGS) $(CODE_COVERAGE_LDFLAGS)
 
 vmod_LTLIBRARIES = libvmod_accept.la
