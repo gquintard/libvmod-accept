@@ -1,6 +1,5 @@
 #include "config.h"
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include <errno.h>
@@ -11,7 +10,6 @@
 #include "cache/cache.h"
 #include "vqueue.h"
 
-#include "vtim.h"
 #include "vcc_accept_if.h"
 
 struct vmod_accept_token {
