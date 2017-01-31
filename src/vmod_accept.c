@@ -15,11 +15,11 @@
 #include "vcc_accept_if.h"
 
 struct vmod_accept_token {
-	unsigned			magic;
-#define TOKEN_MAGIC			0x1ba7712d
-	char				*string;
-	size_t				length;
-	VTAILQ_ENTRY(vmod_accept_token)	list;
+	unsigned				magic;
+#define TOKEN_MAGIC				0x1ba7712d
+	char					*string;
+	size_t					length;
+	VTAILQ_ENTRY(vmod_accept_token)		list;
 };
 
 struct vmod_accept_rule {
