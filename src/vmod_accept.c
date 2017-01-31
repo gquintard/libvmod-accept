@@ -240,9 +240,9 @@ parse_accept(const char **b, const char **e, const char **nxtok, double *q)
 		if (expectq) {
 			/* testing that string starts with 0 or 1 avoids
 			 * checking for NAN and INF */
-			if ((*start != '0' && *start != '1') ||
-					*(start+1) == 'x' ||
-					*(start+1) == 'X')
+			if ((start[0] != '0' && start[0] != '1') ||
+					start[1] == 'x' ||
+					start[1] == 'X')
 				return (2);
 			errno = 0;
 			*q = strtod(start, &eod);
