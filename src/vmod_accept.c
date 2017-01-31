@@ -139,7 +139,8 @@ enum tok_code {
 	TOK_ERR,
 	TOK_COMMA,
 	TOK_SEMI,
-	TOK_EQ
+	TOK_EQ,
+	TOK_OWS
 };
 
 static enum tok_code
@@ -152,9 +153,12 @@ next_token(const char **b, const char **e)
 	AN(e);
 
 	s = *b;
-	while (*s && isspace(*s))
-		s++;
-	*b = s;
+	if (isspace(*s)) {
+		while (*s && isspace(*s))
+			s++;
+		*e = s;
+		return (TOK_OWS);
+	}
 	*e = s + 1;
 
 	switch (*s) {
@@ -177,6 +181,14 @@ next_token(const char **b, const char **e)
 		start = *nxtok;			\
 		tc = next_token(&start, nxtok);	\
 	}while (0)
+
+#define NEXT_AFTER_OWS()		\
+	do {				\
+		NEXT();			\
+		if (tc == TOK_OWS)	\
+			NEXT();		\
+	} while (0);
+
 #define EXPECT(n)	if (tc != n) {return (2);}
 
 /* 0 all good, got a token
@@ -185,7 +197,7 @@ next_token(const char **b, const char **e)
 unsigned
 parse_accept(const char **b, const char **e, const char **nxtok, double *q)
 {
-	const char *start = *b;
+	const char *start;
 	unsigned expectq = 1;
 	enum tok_code tc;
 	char *eod;
@@ -196,24 +208,26 @@ parse_accept(const char **b, const char **e, const char **nxtok, double *q)
 	AN(nxtok);
 	AN(q);
 
-	/* grab the next token, if not EOS, must be a string */
-	tc = next_token(b, e);
+	*nxtok = *b;
+
+	NEXT_AFTER_OWS();
+	*b = start;
+	*e = *nxtok;
 	if (tc == TOK_EOS)
 		return (1);
 	EXPECT(TOK_STR);
-	*nxtok = *e;
 	*q = 1;
 
 	/* look for parameters */
 	while (1) {
 		/* comma and '\0' end the block cleanly, otherwise, we want a
 		 * semi-colon */
-		NEXT();
+		NEXT_AFTER_OWS();
 		if (tc == TOK_EOS || tc == TOK_COMMA)
 			return (0);
 		EXPECT(TOK_SEMI);
 
-		NEXT();
+		NEXT_AFTER_OWS();
 		EXPECT(TOK_STR);
 		if (*nxtok - start != 1 || *start != 'q')
 			expectq = 0;
