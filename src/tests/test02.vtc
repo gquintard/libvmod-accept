@@ -24,15 +24,15 @@ varnish v1 -vcl+backend {
 client c1 {
 	txreq -hdr "tst: bar; q = 1"
 	rxresp
-	expect resp.http.tst == "bar"
+	expect resp.http.tst == "foo"
 
 	txreq -hdr "tst: bar; q= 0.5"
 	rxresp
-	expect resp.http.tst == "bar"
+	expect resp.http.tst == "foo"
 
 	txreq -hdr "tst: bar; q =0.8"
 	rxresp
-	expect resp.http.tst == "bar"
+	expect resp.http.tst == "foo"
 
 	txreq -hdr "tst: bar; quick=0.2, baz; q=0.3"
 	rxresp
