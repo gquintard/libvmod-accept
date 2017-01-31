@@ -54,8 +54,12 @@ vmod_rule__init(VRT_CTX, struct vmod_accept_rule **rulep, const char *vcl_name,
 VCL_VOID
 vmod_rule__fini(struct vmod_accept_rule **rulep)
 {
-	struct vmod_accept_rule *rule = *rulep;
+	struct vmod_accept_rule *rule;
 	struct vmod_accept_token *t, *token2;
+
+	CHECK_OBJ_NOTNULL(*rulep, RULE_MAGIC);
+
+	rule = *rulep;
 
 	VTAILQ_FOREACH_SAFE(t, &rule->tokens, list, token2) {
 		VTAILQ_REMOVE(&rule->tokens, t, list);
