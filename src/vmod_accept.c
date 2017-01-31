@@ -180,7 +180,7 @@ next_token(const char **b, const char **e)
 		AN(*nxtok);			\
 		start = *nxtok;			\
 		tc = next_token(&start, nxtok);	\
-	}while (0)
+	} while (0)
 
 #define NEXT_AFTER_OWS()		\
 	do {				\
