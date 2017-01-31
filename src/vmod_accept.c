@@ -254,6 +254,7 @@ parse_accept(const char **b, const char **e, const char **nxtok, double *q)
 	}
 }
 #undef NEXT
+#undef NEXT_AFTER_OWS
 #undef EXPECT
 
 VCL_STRING
