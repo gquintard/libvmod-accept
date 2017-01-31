@@ -42,11 +42,9 @@ vmod_rule__init(VRT_CTX, struct vmod_accept_rule **rulep, const char *vcl_name,
 	VTAILQ_INIT(&rule->tokens);
 	AZ(pthread_rwlock_init(&rule->mtx, NULL));
 	if (fallback == NULL)
-		rule->fallback = strdup("");
+		REPLACE(rule->fallback, "");
 	else
-		rule->fallback = strdup(fallback);
-	AN(rule->fallback);
-
+		REPLACE(rule->fallback, fallback);
 	*rulep = rule;
 }
 
