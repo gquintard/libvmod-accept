@@ -1,31 +1,6 @@
 varnishtest "Test accept vmod"
 
-server s1 {
-       rxreq
-       txresp
-       expect req.http.tst == "foo"
-
-       rxreq
-       txresp
-       expect req.http.tst == "bar"
-
-       rxreq
-       txresp
-       expect req.http.tst == "baz"
-
-       rxreq
-       txresp
-       expect req.http.tst == "bar"
-
-       rxreq
-       txresp
-       expect req.http.tst == "bar"
-
-       rxreq
-       txresp
-       expect req.http.tst == "bar"
-
-} -start
+server s1 {}
 
 varnish v1 -vcl+backend {
 	import ${vmod_accept};
