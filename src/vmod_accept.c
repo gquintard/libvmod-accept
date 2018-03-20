@@ -3,11 +3,19 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <errno.h>
+#include <string.h>
 
-/* need vcl.h before vrt.h for vmod_evet_f typedef */
-#include "vcl.h"
-#include "vrt.h"
-#include "cache/cache.h"
+#include <cache/cache.h>
+#include <vcl.h>
+
+#ifndef VRT_H_INCLUDED
+#  include <vrt.h>
+#endif
+
+#ifndef VDEF_H_INCLUDED
+#  include <vdef.h>
+#endif
+
 #include "vqueue.h"
 
 #include "vcc_accept_if.h"
@@ -28,7 +36,7 @@ struct vmod_accept_rule {
 	pthread_rwlock_t			mtx;
 };
 
-VCL_VOID __match_proto__()
+VCL_VOID
 vmod_rule__init(VRT_CTX, struct vmod_accept_rule **rulep, const char *vcl_name,
 		VCL_STRING fallback)
 {
