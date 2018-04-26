@@ -4,9 +4,6 @@
 #include <ctype.h>
 #include <errno.h>
 
-/* need vcl.h before vrt.h for vmod_evet_f typedef */
-#include "vcl.h"
-#include "vrt.h"
 #include "cache/cache.h"
 #include "vqueue.h"
 
@@ -28,7 +25,7 @@ struct vmod_accept_rule {
 	pthread_rwlock_t			mtx;
 };
 
-VCL_VOID __match_proto__()
+VCL_VOID v_matchproto_()
 vmod_rule__init(VRT_CTX, struct vmod_accept_rule **rulep, const char *vcl_name,
 		VCL_STRING fallback)
 {
