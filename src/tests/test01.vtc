@@ -30,6 +30,11 @@ client c1 {
 	rxresp
 	expect resp.http.tst == "bar"
 
+	txreq -hdr "tst: BaR"
+	rxresp
+	expect resp.http.tst == "bar"
+
+
 	txreq -hdr "tst: baz"
 	rxresp
 	expect resp.http.tst == "baz"

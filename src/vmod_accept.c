@@ -82,7 +82,7 @@ match_token(struct vmod_accept_rule *rule, VCL_STRING s, size_t l)
 		AN(t->string);
 		if (l != t->length)
 			continue;
-		if (!strncmp(t->string, s, l))
+		if (!strncasecmp(t->string, s, l))
 			break;
 	}
 	return (t);
