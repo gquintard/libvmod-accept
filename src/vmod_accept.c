@@ -33,6 +33,8 @@ vmod_rule__init(VRT_CTX, struct vmod_accept_rule **rulep, const char *vcl_name,
 {
 	struct vmod_accept_rule *rule;
 
+	(void)ctx;
+	(void)vcl_name;
 	ALLOC_OBJ(rule, RULE_MAGIC);
 	AN(rule);
 
@@ -97,7 +99,7 @@ add_or_remove(struct vmod_accept_rule *rule, VCL_STRING s, unsigned action)
 
 	CHECK_OBJ_NOTNULL(rule, RULE_MAGIC);
 
-	if (s == NULL)
+	if (s == NULL || *s == '\0')
 		return;
 
 	AZ(pthread_rwlock_wrlock(&rule->mtx));
@@ -119,16 +121,19 @@ add_or_remove(struct vmod_accept_rule *rule, VCL_STRING s, unsigned action)
 	AZ(pthread_rwlock_unlock(&rule->mtx));
 }
 
-
 VCL_VOID
 vmod_rule_add(VRT_CTX, struct vmod_accept_rule *rule, VCL_STRING s)
 {
+	(void)ctx;
+
 	add_or_remove(rule, s, ADD);
 }
 
 VCL_VOID
 vmod_rule_remove(VRT_CTX, struct vmod_accept_rule *rule, VCL_STRING s)
 {
+	(void)ctx;
+
 	add_or_remove(rule, s, REMOVE);
 }
 
@@ -193,7 +198,7 @@ next_token(const char **b, const char **e)
 /* 0 all good, got a token
  * 1 reached the end of string
  * 2 parsing error */
-unsigned
+static unsigned
 parse_accept(const char **b, const char **e, const char **nxtok, double *q)
 {
 	const char *start;
