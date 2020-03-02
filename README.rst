@@ -38,7 +38,7 @@ just the accept-language ones.
 FUNCTIONS
 =========
 
-The full API is listed in src/vmod_str.vcc.
+The full API is listed in src/vmod_accept.vcc.
 
 INSTALLATION
 ============
